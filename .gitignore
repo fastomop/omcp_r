@@ -20,13 +20,16 @@ dist/
 build/
 *.egg-info/
 
-# Unit test / coverage reports
-htmlcov/
+# Testing
 .coverage
-.coverage.*
+htmlcov/
+.pytest_cache/
 
 # IDE specific files
 .idea/
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 *.sublime-workspace
-*

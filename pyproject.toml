@@ -1,18 +1,20 @@
 [project]
-name = "pysandbox"
+name = "omcp_py"
 version = "0.1.0"
-description = "Add your description here"
-readme = "README.md"
-requires-python = ">=3.13"
+description = "Python utilities for OMOP CDM data manipulation"
+requires-python = ">=3.10"
 dependencies = [
-    "mcp[cli]>=1.9.0",
-    "numpy>=2.2.6",
-    "pandas>=2.2.3",
+    "mcp[cli]",
+    "numpy",
+    "pandas"
 ]
-
-[project.scripts]
-pysandbox = "pysandbox:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.uv]
+managed = true
+
+[project.scripts]
+omcp-py = "omcp_py.server:main"
