@@ -1,5 +1,5 @@
 from mcp import Tool, ToolInput, ToolOutput
-from ..utils.sandbox import execute_python_code
+from ..utils.omcp_py import execute_python_code   # Updated import path
 
 class RunPythonTool(Tool):
     def __init__(self):
