@@ -33,6 +33,15 @@ The OMOP MCP Server allows you to:
 - (Optional) A virtual environment tool (recommended)
 - Docker (if using the containerized setup)
 
+### External Dependencies
+
+In addition to the Python dependencies listed in `requirements.txt`, the sandbox depends on some external tools:
+- **Docker:** Used to containerize the SSE server.  
+  [Docker Installation Guide](https://docs.docker.com/get-docker/)
+- **Deno:** The Deno runtime is required to run the `mcp-run-python` module via npm.  
+  [Deno Installation Guide](https://deno.land/#installation)
+- **Pyodide:** Loaded by Deno via npm as part of the `jsr:@pydantic/mcp-run-python` module. No separate installation is required.
+
 ### Installation
 
 1. **Clone the repository:**
