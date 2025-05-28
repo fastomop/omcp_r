@@ -1,0 +1,4 @@
+mcp
+uv
+mkdocs
+mkdocs-material
