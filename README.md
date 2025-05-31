@@ -1,122 +1,145 @@
-# OMOP MCP Server
+# OMCP Python Sandbox Server
 
-A Python sandbox server for the Observational Medical Outcomes Partnership (OMOP) Common Data Model. This project provides a controlled environment for executing and validating protocols, highlighting the use of UV for enhanced performance. It also offers a Docker-based deployment option using Deno to run an SSE server for asynchronous tool execution.
+A simple, safe, and sandboxed Python code execution environment for MCP servers. This project uses a Dockerized Python HTTP server as a sandbox, and a Python MCP proxy that communicates with it.
 
-## Overview
+---
 
-The OMOP MCP Server allows you to:
-- Execute Python code in an isolated environment **via a Dockerized Deno+Pyodide sandbox**.
-- Capture and manage outputs and errors.
-- Leverage UV for efficient asynchronous operations.
-- Run commands via a Docker container with an SSE interface.
+## Features
+- **Sandboxed Python execution** via Docker
+- **HTTP API** for code execution
+- **Easy integration** with MCP via a Python proxy
+- **Fast Python workflow** using [uv](https://github.com/astral-sh/uv)
 
-## Code Structure
+---
 
-- **Server Initialization (`server.py`):**  
-  Sets up the MCP server with a proxy tool (`PythonSandboxProxy`) that forwards all Python code execution requests to a Dockerized Deno+Pyodide sandbox. The server is launched using a stdio interface and communicates with the sandbox via HTTP/SSE.
+## Prerequisites
 
-- **Tool Implementation:**  
-  The only tool exposed is the proxy tool, which wraps the remote execution functionality.
+- **Python 3.8+** (for MCP server and uv)
+- **Docker** (for sandboxed code execution)
+- **uv** (for fast Python dependency management and running scripts)
+- **git** (to clone the repository)
 
-- **Docker Integration:**  
-  The project includes a Dockerfile and a docker-compose.yml for containerizing the SSE server. The Docker image is built using Deno and runs the `mcp-run-python` command to serve on port **8000**.
+---
 
-## Setup
-
-### Prerequisites
-
-- Python 3.8 or higher
-- pip (Python package installer)
-- (Optional) A virtual environment tool (recommended)
-- Docker (required for the sandboxed execution)
-
-### External Dependencies
-
-In addition to the Python dependencies listed in `requirements.txt`, the sandbox depends on some external tools:
-- **Docker:** Used to containerize the SSE server.  
-  [Docker Installation Guide](https://docs.docker.com/get-docker/)
-- **Deno:** The Deno runtime is required to run the `mcp-run-python` module via npm.  
-  [Deno Installation Guide](https://deno.land/#installation)
-- **Pyodide:** Loaded by Deno via npm as part of the `jsr:@pydantic/mcp-run-python` module. No separate installation is required.
-
-### Installation
-
-1. **Clone the repository:**
-
-   ```sh
-   git clone https://github.com/fastomop/omcp_py.git
-   cd omcp_py
-   ```
-
-2. **Create and activate a virtual environment (recommended):**
-
-   ```sh
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
-
-3. **Install dependencies:**
-
-   ```sh
-   pip install -r requirements.txt
-   ```
-
-   > **Note:** If UV is not already in `requirements.txt`, install it separately:
-   >
-   > ```sh
-   > pip install uv
-   > ```
-
-## Running the Server Locally
-
-> **Note:** All Python code execution is now proxied to the Dockerized Deno+Pyodide sandbox. Local execution is not supported for security reasons.
-
-To run the server, first ensure the Docker sandbox is running (see below), then start the MCP server:
-
+## 1. Clone the Repository
 ```sh
-python server.py
+git clone https://github.com/fastomop/omcp_py.git
+cd omcp_py
 ```
 
-## Docker Setup
+---
 
-### Using Docker Directly
+## 2. Install Docker
+- [Docker Installation Guide](https://docs.docker.com/get-docker/)
+- Make sure Docker is running:
+  ```sh
+  docker --version
+  ```
 
-1. **Build the Docker Image:**
+---
 
-   ```sh
-   docker build -t mcp-run-python .
-   ```
+## 3. Install uv (if not already installed)
+- Install with pip:
+  ```sh
+  pip install uv
+  ```
+- Or with pipx (recommended):
+  ```sh
+  pipx install uv
+  ```
+- Check uv is installed:
+  ```sh
+  uv --version
+  ```
 
-2. **Run the Docker Container:**
+---
 
-   ```sh
-   docker run -p 8000:8000 mcp-run-python
-   ```
-
-### Using Docker Compose
-
-You can also leverage the provided `docker-compose.yml` to build and run the container:
+## 4. Build and Run the Python Sandbox Server (Docker)
+This server runs in a container and exposes `/run` for code execution.
 
 ```sh
-docker-compose up --build
+docker build -t python-sandbox-server .
+docker run -p 8000:8000 python-sandbox-server
 ```
+- The server will be available at `http://localhost:8000/run`.
+- Leave this terminal running.
 
-This starts the container with port **8000** exposed and mounts the volume for `node_modules`.
+---
 
-## Documentation
-
-Project documentation is managed with MkDocs and the Material theme. To serve the documentation locally, run:
-
+## 5. Install Python Dependencies with uv
+In a new terminal, from your project directory:
 ```sh
-mkdocs serve
+uv pip install -r requirements.txt
 ```
 
-Then, open your browser and navigate to [http://127.0.0.1:8000](http://127.0.0.1:8000).
+---
+
+## 6. Run the MCP Python Server
+```sh
+uv run server.py
+```
+- The MCP server will now proxy all Python code execution requests to the sandbox server via HTTP.
+
+---
+
+## 7. Test the Sandbox Server Directly
+You can test the sandbox server with curl:
+```sh
+curl -X POST http://localhost:8000/run -H "Content-Type: application/json" -d '{"code": "print(1+1)\n2+2"}'
+```
+Response:
+```json
+{"result": 4, "output": "2\n", "error": null}
+```
+
+---
+
+## Project Structure
+```
+.
+├── server.py            # MCP Python proxy server
+├── sandbox_server.py    # Flask-based Python sandbox HTTP server
+├── Dockerfile           # Builds the sandbox server
+├── requirements.txt     # Python dependencies
+├── pyproject.toml       # Project metadata
+├── ...
+```
+
+---
+
+## Development & Customization
+- Use `uv` for all Python dependency management and running scripts.
+- Use Docker for sandbox isolation.
+- You can add more endpoints or security to `sandbox_server.py` as needed.
+- To update dependencies, edit `requirements.txt` and run `uv pip install -r requirements.txt` again.
+
+---
+
+## Troubleshooting
+- **Docker build fails:** Make sure Docker is installed and running. Try `docker system prune` if you have disk space issues.
+- **uv not found:** Make sure you installed uv and your PATH is set correctly.
+- **Python module errors:** Ensure you installed all dependencies with `uv pip install -r requirements.txt`.
+- **Port conflicts:** Make sure nothing else is running on port 8000.
+
+---
 
 ## Contributing
+Contributions are welcome! Please open an issue or submit a pull request.
 
-Contributions are welcome! If you encounter any issues or have suggestions for improvements, please open an issue or submit a pull request.
+---
+
+## FAQ
+
+**Q: Is the sandbox server secure?**
+A: The server runs in Docker and restricts code to a namespace, but for production, consider additional Docker resource limits and security measures.
+
+**Q: Can I use a different port?**
+A: Yes, change the port in `sandbox_server.py` and update the Docker run command accordingly.
+
+**Q: How do I add more Python packages to the sandbox?**
+A: Edit the Dockerfile to install more packages with pip, then rebuild the image.
+
+---
 
 ## License
-
-This project is licensed under the MIT License.
+MIT
