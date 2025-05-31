@@ -5,7 +5,7 @@ A Python sandbox server for the Observational Medical Outcomes Partnership (OMOP
 ## Overview
 
 The OMOP MCP Server allows you to:
-- Execute Python code in an isolated environment.
+- Execute Python code in an isolated environment **via a Dockerized Deno+Pyodide sandbox**.
 - Capture and manage outputs and errors.
 - Leverage UV for efficient asynchronous operations.
 - Run commands via a Docker container with an SSE interface.
@@ -13,13 +13,10 @@ The OMOP MCP Server allows you to:
 ## Code Structure
 
 - **Server Initialization (`server.py`):**  
-  Sets up the MCP server with one or more tools (such as `RunPythonTool`) that execute Python code safely. The server is launched using a stdio interface or can be connected via SSE when deployed in Docker.
+  Sets up the MCP server with a proxy tool (`PythonSandboxProxy`) that forwards all Python code execution requests to a Dockerized Deno+Pyodide sandbox. The server is launched using a stdio interface and communicates with the sandbox via HTTP/SSE.
 
 - **Tool Implementation:**  
-  Tools (located in the tools directory) wrap functionality such as executing Python code in a sandboxed environment and capturing outputs.
-
-- **Python Execution Utility (`omcp_py/utils/omcp_py.py`):**  
-  Provides a function to execute arbitrary Python code, capturing stdout, stderr, and any exceptions.
+  The only tool exposed is the proxy tool, which wraps the remote execution functionality.
 
 - **Docker Integration:**  
   The project includes a Dockerfile and a docker-compose.yml for containerizing the SSE server. The Docker image is built using Deno and runs the `mcp-run-python` command to serve on port **8000**.
@@ -31,7 +28,7 @@ The OMOP MCP Server allows you to:
 - Python 3.8 or higher
 - pip (Python package installer)
 - (Optional) A virtual environment tool (recommended)
-- Docker (if using the containerized setup)
+- Docker (required for the sandboxed execution)
 
 ### External Dependencies
 
@@ -72,19 +69,13 @@ In addition to the Python dependencies listed in `requirements.txt`, the sandbox
 
 ## Running the Server Locally
 
-To run the server using UV (with auto-reload) or directly via Python, use one of the following commands:
+> **Note:** All Python code execution is now proxied to the Dockerized Deno+Pyodide sandbox. Local execution is not supported for security reasons.
 
-- **Using UV:**
+To run the server, first ensure the Docker sandbox is running (see below), then start the MCP server:
 
-  ```sh
-  uv --app omcp_py:app --reload
-  ```
-
-- **Directly with Python:**
-
-  ```sh
-  python server.py
-  ```
+```sh
+python server.py
+```
 
 ## Docker Setup
 

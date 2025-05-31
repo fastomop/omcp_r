@@ -9,17 +9,18 @@ class RunPythonTool(Tool):
             input_schema={
                 "type": "object",
                 "properties": {
-                    "code": {
+                    "python_code": {
                         "type": "string", 
                         "description": "Python code to execute"
                     }
                 },
-                "required": ["code"]
+                "required": ["python_code"]
             }
         )
     
     async def execute(self, params: ToolInput) -> ToolOutput:
-        code = params.get("code")
+        # Retrieve the code from the key 'python_code'
+        code = params.get("python_code")
         result = execute_python_code(code)
         return ToolOutput({
             "result": result.get("return_value"),
