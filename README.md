@@ -36,6 +36,7 @@ A secure, MCP-compliant Python code execution environment with Docker-based sand
 - **Python 3.10+** (for MCP server)
 - **Docker** (for sandbox isolation)
 - **uv** (for dependency management)
+- **Node.js 18+** (for MCP Inspector - optional)
 
 ## Installation
 
@@ -75,6 +76,54 @@ python server_fastmcp.py
 ```
 
 The server will start and expose the following MCP tools:
+
+### Using MCP Inspector for Development and Testing
+
+The MCP Inspector provides a web-based interface to test and debug your MCP server tools in real-time.
+
+#### Installation
+```sh
+# Install Node.js if not already installed
+sudo apt install nodejs npm  # Ubuntu/Debian
+# or
+brew install node  # macOS
+```
+
+#### Launching the Inspector
+```sh
+# Start your MCP server in one terminal
+uv run server_fastmcp.py
+
+# Launch MCP Inspector in another terminal
+npx @modelcontextprotocol/inspector uv run server_fastmcp.py
+```
+
+#### Accessing the Web Interface
+After launching the inspector, open your browser and navigate to:
+```
+http://127.0.0.1:6274 #local host address may be different for your machine
+```
+
+#### Inspector Features
+- **Interactive Tool Testing**: Test all MCP tools with a web interface
+- **Request/Response Inspection**: View JSON-RPC messages in real-time
+- **Code Execution Testing**: Run Python code in sandboxes
+- **Package Installation Testing**: Install packages in sandboxes
+- **Sandbox Management**: Create, list, and remove sandboxes
+- **Error Debugging**: View detailed error messages and stack traces
+- **Performance Monitoring**: Track execution times and resource usage
+
+#### Inspector Workflow
+1. **Create a Sandbox**: Use the `create_sandbox` tool to create a new isolated environment
+2. **Execute Code**: Use `execute_python_code` to run Python code in the sandbox
+3. **Install Packages**: Use `install_package` to add dependencies to the sandbox
+4. **Monitor Sandboxes**: Use `list_sandboxes` to see all active sandboxes
+5. **Cleanup**: Use `remove_sandbox` to clean up when done
+
+#### Troubleshooting Inspector
+- **Port Already in Use**: The inspector typically uses port 6274. If busy, it will automatically find another port
+- **Connection Issues**: Ensure your MCP server is running before launching the inspector
+- **Node.js Version**: Ensure you have Node.js 18+ installed for compatibility
 
 ### Tool Examples
 
@@ -222,6 +271,12 @@ pytest
 - Structured format with security events
 
 ## Recent Updates
+
+### v0.2.1 - MCP Inspector Integration
+- **MCP Inspector Support**: Added web-based tool testing interface
+- **Development Tools**: Enhanced debugging and testing capabilities
+- **Interactive Testing**: Real-time tool testing with request/response inspection
+- **Performance Monitoring**: Track execution times and resource usage
 
 ### v0.2.0 - Enhanced Security & FastMCP
 - **Enhanced Docker Security**: User isolation, read-only filesystem, dropped capabilities

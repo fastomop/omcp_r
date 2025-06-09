@@ -19,6 +19,9 @@ dev = [
     "black>=24.0.0",
     "ruff>=0.6.0",
 ]
+inspector = [
+    "nodejs>=18.0.0",  # Required for MCP Inspector
+]
 
 [project.scripts]
 mcp-sandbox = "mcp_sandbox.server:main"
