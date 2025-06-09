@@ -1,13 +1,27 @@
 [project]
 name = "omcp_py"
 version = "0.1.0"
-description = "Python utilities for OMOP CDM data manipulation"
+description = "A secure Python code execution sandbox for MCP"
 requires-python = ">=3.10"
 dependencies = [
-    "mcp[cli]",
-    "numpy",
-    "pandas"
+    "mcp>=1.6.0",
+    "httpx>=0.27.0",
+    "flask>=3.0.0",
+    "pydantic>=2.0.0",
+    "docker>=7.0.0",
+    "python-dotenv>=1.0.0",
 ]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "black>=24.0.0",
+    "ruff>=0.6.0",
+]
+
+[project.scripts]
+mcp-sandbox = "mcp_sandbox.server:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -15,6 +29,12 @@ build-backend = "hatchling.build"
 
 [tool.uv]
 managed = true
+dev-dependencies = []
 
-[project.scripts]
-omcp-py = "omcp_py.server:main"
+[tool.black]
+line-length = 88
+target-version = ['py310']
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
