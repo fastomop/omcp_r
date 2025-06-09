@@ -1,6 +1,7 @@
 import sys
 import io
 from contextlib import redirect_stdout, redirect_stderr
+from mcp.shared import ServerConfig
 
 def execute_python_code(code: str) -> dict:
     """Execute Python code in a controlled environment and return the result."""

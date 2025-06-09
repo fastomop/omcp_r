@@ -1,145 +1,249 @@
 # OMCP Python Sandbox Server
 
-A simple, safe, and sandboxed Python code execution environment for MCP servers. This project uses a Dockerized Python HTTP server as a sandbox, and a Python MCP proxy that communicates with it.
-
----
+A secure, MCP-compliant Python code execution environment with Docker-based sandboxing. This server implements the Model Context Protocol (MCP) specification for safe, isolated Python code execution with enterprise-grade security features.
 
 ## Features
-- **Sandboxed Python execution** via Docker
-- **HTTP API** for code execution
-- **Easy integration** with MCP via a Python proxy
-- **Fast Python workflow** using [uv](https://github.com/astral-sh/uv)
 
----
+- **MCP-Compliant Tools**:
+  - `create_sandbox`: Create isolated Python environments
+  - `list_sandboxes`: List active sandboxes with status
+  - `remove_sandbox`: Safely remove sandboxes
+  - `execute_python_code`: Run Python code in sandbox
+  - `install_package`: Install Python packages in sandbox
+
+- **Enterprise Security Features**:
+  - Docker-based isolation with enhanced security options
+  - User isolation (sandboxuser instead of root)
+  - Read-only filesystem with temporary writable areas
+  - Dropped Linux capabilities (cap_drop=["ALL"])
+  - No privilege escalation (no-new-privileges)
+  - Command injection protection (shlex.quote)
+  - Resource limits (CPU, memory, execution timeouts)
+  - Network isolation (network_mode="none")
+  - Input validation and sanitization
+  - Auto-cleanup of inactive sandboxes
+
+- **MCP Integration**:
+  - Standard MCP tool interface
+  - Proper error handling with timeout support
+  - Structured logging
+  - Type-safe responses
+  - JSON output support
+  - FastMCP implementation available
 
 ## Prerequisites
 
-- **Python 3.8+** (for MCP server and uv)
-- **Docker** (for sandboxed code execution)
-- **uv** (for fast Python dependency management and running scripts)
-- **git** (to clone the repository)
+- **Python 3.10+** (for MCP server)
+- **Docker** (for sandbox isolation)
+- **uv** (for dependency management)
 
----
+## Installation
 
-## 1. Clone the Repository
+1. **Clone the Repository**:
+   ```sh
+   git clone https://github.com/fastomop/omcp_py.git
+   cd omcp_py
+   ```
+
+2. **Install Dependencies**:
+   ```sh
+   uv pip install -r requirements.txt
+   ```
+
+3. **Environment Setup** (optional):
+   Create a `.env` file:
+   ```env
+   SANDBOX_TIMEOUT=300
+   MAX_SANDBOXES=10
+   DOCKER_IMAGE=python:3.11-slim
+   DEBUG=false
+   LOG_LEVEL=INFO
+   ```
+
+## Usage
+
+### Starting the Server
+
+**Standard MCP Server:**
 ```sh
-git clone https://github.com/fastomop/omcp_py.git
-cd omcp_py
+python server.py
 ```
 
----
-
-## 2. Install Docker
-- [Docker Installation Guide](https://docs.docker.com/get-docker/)
-- Make sure Docker is running:
-  ```sh
-  docker --version
-  ```
-
----
-
-## 3. Install uv (if not already installed)
-- Install with pip:
-  ```sh
-  pip install uv
-  ```
-- Or with pipx (recommended):
-  ```sh
-  pipx install uv
-  ```
-- Check uv is installed:
-  ```sh
-  uv --version
-  ```
-
----
-
-## 4. Build and Run the Python Sandbox Server (Docker)
-This server runs in a container and exposes `/run` for code execution.
-
+**FastMCP Server (Enhanced):**
 ```sh
-docker build -t python-sandbox-server .
-docker run -p 8000:8000 python-sandbox-server
+python server_fastmcp.py
 ```
-- The server will be available at `http://localhost:8000/run`.
-- Leave this terminal running.
 
----
+The server will start and expose the following MCP tools:
 
-## 5. Install Python Dependencies with uv
-In a new terminal, from your project directory:
+### Tool Examples
+
+1. **Create a Sandbox**:
+   ```python
+   result = await mcp.create_sandbox()
+   sandbox_id = result["sandbox_id"]
+   ```
+
+2. **Install a Package**:
+   ```python
+   await mcp.install_package(
+       sandbox_id=sandbox_id,
+       package="numpy==1.24.0",
+       timeout=60
+   )
+   ```
+
+3. **Execute Code**:
+   ```python
+   result = await mcp.execute_python_code(
+       sandbox_id=sandbox_id,
+       code="""
+       import numpy as np
+       arr = np.array([1, 2, 3])
+       print({"sum": arr.sum()})
+       """,
+       timeout=30
+   )
+   ```
+
+4. **List Sandboxes**:
+   ```python
+   sandboxes = await mcp.list_sandboxes(include_inactive=False)
+   ```
+
+5. **Remove a Sandbox**:
+   ```python
+   await mcp.remove_sandbox(
+       sandbox_id=sandbox_id,
+       force=False
+   )
+   ```
+
+### Tool Specifications
+
+#### `create_sandbox`
+- **Input**: Optional timeout (default: 300s)
+- **Output**: `{sandbox_id, created_at, last_used}`
+
+#### `execute_python_code`
+- **Input**: 
+  - `sandbox_id` (required)
+  - `code` (required)
+  - `timeout` (optional, default: 30s)
+- **Output**: `{success, output, error, exit_code}`
+
+#### `install_package`
+- **Input**:
+  - `sandbox_id` (required)
+  - `package` (required, e.g., "numpy==1.24.0")
+  - `timeout` (optional, default: 60s)
+- **Output**: `{success, output, error, exit_code}`
+
+#### `list_sandboxes`
+- **Input**: `include_inactive` (optional, default: false)
+- **Output**: `{sandboxes: [...], count: N}`
+
+#### `remove_sandbox`
+- **Input**:
+  - `sandbox_id` (required)
+  - `force` (optional, default: false)
+- **Output**: `{success, message}`
+
+## Security
+
+### Container Security
+Each sandbox runs in a Docker container with:
+- **User isolation**: Runs as `sandboxuser` instead of root
+- **Read-only filesystem**: Prevents file system modifications
+- **Dropped capabilities**: Removes all Linux capabilities
+- **No privilege escalation**: Prevents privilege escalation attacks
+- **Temporary filesystems**: Secure tmpfs mounts for `/tmp` and `/sandbox`
+- **No network access**: Complete network isolation
+- **Resource limits**: CPU, memory, and execution time limits
+
+### Code Execution Security
+- **Command injection protection**: Uses `shlex.quote` for proper escaping
+- **List-form commands**: Prevents shell injection attacks
+- **Timeout handling**: Configurable execution timeouts
+- **Input validation**: Comprehensive input sanitization
+- **Error isolation**: Errors don't affect other sandboxes
+
+### Resource Management
+- **Maximum sandboxes limit**: Prevents resource exhaustion
+- **Timeout-based cleanup**: Automatic removal of inactive sandboxes
+- **Force removal option**: Manual cleanup when needed
+- **Memory limits**: 512MB per sandbox
+- **CPU limits**: Restricted CPU usage
+
+## Implementation Options
+
+### Standard MCP Server (`server.py`)
+- Full MCP specification compliance
+- Explicit tool schemas
+- Comprehensive error handling
+- Production-ready implementation
+
+### FastMCP Server (`server_fastmcp.py`)
+- Simplified syntax with decorators
+- Enhanced security features
+- Better timeout handling
+- Faster development workflow
+
+## Development
+
+### Project Structure
+```
+omcp_py/
+├── src/
+│   └── omcp_py/
+│       ├── core/
+│       │   └── sandbox.py      # Enhanced sandbox management
+│       ├── tools/
+│       │   ├── execution_tools.py
+│       │   └── sandbox_tools.py
+│       └── utils/
+│           └── config.py       # Configuration
+├── server.py                   # Standard MCP server
+├── server_fastmcp.py           # FastMCP server (enhanced)
+├── Dockerfile                  # UV-based Docker build
+├── requirements.txt
+└── pyproject.toml
+```
+
+### Testing
 ```sh
-uv pip install -r requirements.txt
+uv pip install -r requirements.txt[dev]
+pytest
 ```
 
----
+### Logging
+- Logs to stderr (MCP convention)
+- Configurable levels (INFO, DEBUG, etc.)
+- Structured format with security events
 
-## 6. Run the MCP Python Server
-```sh
-uv run server.py
-```
-- The MCP server will now proxy all Python code execution requests to the sandbox server via HTTP.
+## Recent Updates
 
----
+### v0.2.0 - Enhanced Security & FastMCP
+- **Enhanced Docker Security**: User isolation, read-only filesystem, dropped capabilities
+- **FastMCP Implementation**: Alternative server with simplified syntax
+- **Command Injection Protection**: shlex.quote for proper command escaping
+- **Timeout Handling**: Specific timeout error handling
+- **UV Package Manager**: Faster package management in Docker
+- **Improved Error Handling**: Better timeout and security error handling
 
-## 7. Test the Sandbox Server Directly
-You can test the sandbox server with curl:
-```sh
-curl -X POST http://localhost:8000/run -H "Content-Type: application/json" -d '{"code": "print(1+1)\n2+2"}'
-```
-Response:
-```json
-{"result": 4, "output": "2\n", "error": null}
-```
-
----
-
-## Project Structure
-```
-.
-├── server.py            # MCP Python proxy server
-├── sandbox_server.py    # Flask-based Python sandbox HTTP server
-├── Dockerfile           # Builds the sandbox server
-├── requirements.txt     # Python dependencies
-├── pyproject.toml       # Project metadata
-├── ...
-```
-
----
-
-## Development & Customization
-- Use `uv` for all Python dependency management and running scripts.
-- Use Docker for sandbox isolation.
-- You can add more endpoints or security to `sandbox_server.py` as needed.
-- To update dependencies, edit `requirements.txt` and run `uv pip install -r requirements.txt` again.
-
----
-
-## Troubleshooting
-- **Docker build fails:** Make sure Docker is installed and running. Try `docker system prune` if you have disk space issues.
-- **uv not found:** Make sure you installed uv and your PATH is set correctly.
-- **Python module errors:** Ensure you installed all dependencies with `uv pip install -r requirements.txt`.
-- **Port conflicts:** Make sure nothing else is running on port 8000.
-
----
+### v0.1.0 - Initial Release
+- Basic MCP server implementation
+- Docker-based sandboxing
+- Core tool functionality
+- Resource management
 
 ## Contributing
-Contributions are welcome! Please open an issue or submit a pull request.
 
----
-
-## FAQ
-
-**Q: Is the sandbox server secure?**
-A: The server runs in Docker and restricts code to a namespace, but for production, consider additional Docker resource limits and security measures.
-
-**Q: Can I use a different port?**
-A: Yes, change the port in `sandbox_server.py` and update the Docker run command accordingly.
-
-**Q: How do I add more Python packages to the sandbox?**
-A: Edit the Dockerfile to install more packages with pip, then rebuild the image.
-
----
+1. Fork the repository
+2. Create a feature branch
+3. Commit changes
+4. Push to the branch
+5. Create a Pull Request
 
 ## License
 MIT

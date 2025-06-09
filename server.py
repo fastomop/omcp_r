@@ -1,44 +1,81 @@
+"""
+Main MCP Server - Standard MCP implementation for Python sandbox.
+
+Sets up the MCP server with sandbox management tools, proper logging,
+and error handling following MCP conventions.
+"""
+
 import asyncio
+import logging
+import sys
+from typing import Optional
 from mcp.server import Server
-from mcp.types import Tool, ToolInput, ToolOutput
-from mcp.stdio import stdio_server
-import httpx
+from mcp.server.stdio import stdio_server
+from mcp.shared import ServerConfig
 
-# Proxy tool that forwards Python execution requests to the Node.js Pyodide sandbox
-class PythonSandboxProxy(Tool):
-    """Proxy tool that forwards Python execution requests to the Node.js Pyodide sandbox"""
+from omcp_py.tools.sandbox_tools import CreateSandboxTool, ListSandboxesTool, RemoveSandboxTool
+from omcp_py.tools.execution_tools import ExecutePythonTool, InstallPackageTool
+from omcp_py.utils.config import get_config
+
+# Load configuration and setup logging
+config = get_config()
+logging.basicConfig(
+    level=config.log_level,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    stream=sys.stderr  # Log to stderr as per MCP convention
+)
+
+logger = logging.getLogger(__name__)
+
+def create_server() -> Server:
+    """Create and configure the MCP server with all tools."""
+    # Create server config with metadata
+    server_config = ServerConfig(
+        name="omcp-sandbox",
+        version="0.1.0",
+        description="A secure Python code execution sandbox for MCP",
+        debug=config.debug
+    )
     
-    def __init__(self):
-        super().__init__(
-            name="run_python_code",
-            description="Run Python code in a secure sandboxed environment",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "code": {
-                        "type": "string",
-                        "description": "Python code to execute"
-                    }
-                },
-                "required": ["code"]
-            }
-        )
-        self.sandbox_url = "http://localhost:8000/run"
+    # Initialize server
+    server = Server(server_config)
+    
+    # Register all available tools
+    tools = [
+        CreateSandboxTool(),
+        ListSandboxesTool(),
+        RemoveSandboxTool(),
+        ExecutePythonTool(),
+        InstallPackageTool()
+    ]
+    
+    # Add tools to server
+    for tool in tools:
+        server.add_tool(tool)
+        logger.debug(f"Registered tool: {tool.name}")
+    
+    return server
+
+async def main() -> Optional[int]:
+    """Main entry point - start the MCP server."""
+    try:
+        logger.info("Starting MCP sandbox server...")
+        server = create_server()
         
-    async def execute(self, params: ToolInput) -> ToolOutput:
-        code = params.get("code")
-        async with httpx.AsyncClient() as client:
-            response = await client.post(self.sandbox_url, json={"code": code})
-            data = response.json()
-            return ToolOutput({"result": data.get("result"), "error": data.get("error")})
-
-async def main():
-    # Create the server and add only the proxy tool for Docker-based execution.
-    server = Server()
-    server.add_tool(PythonSandboxProxy())
-    
-    # Start the server using stdio.
-    await stdio_server(server)
+        # Log registered tools for debugging
+        tool_names = [tool.name for tool in server.tools]
+        logger.info("Registered tools: %s", ", ".join(tool_names))
+        
+        # Start server with stdio transport
+        await stdio_server(server)
+        return 0
+        
+    except KeyboardInterrupt:
+        logger.info("Server stopped by user")
+        return 0
+    except Exception as e:
+        logger.error("Server stopped due to error: %s", e, exc_info=True)
+        return 1
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    sys.exit(asyncio.run(main()))
