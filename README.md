@@ -1,5 +1,20 @@
 # OMCP Python Sandbox Server
 
+> **IMPORTANT: After cloning, you must install the package in editable mode before running any server scripts:**
+>
+> ```sh
+> uv pip install -e .
+> # or
+> pip install -e .
+> ```
+>
+> Or, run the provided install script:
+> ```sh
+> ./install.sh
+> ```
+>
+> This ensures the `omcp_py` package is available for all server scripts and tools.
+
 A secure, MCP-compliant Python code execution environment with Docker-based sandboxing. This server implements the Model Context Protocol (MCP) specification for safe, isolated Python code execution with enterprise-grade security features.
 
 ## Features
@@ -51,7 +66,17 @@ A secure, MCP-compliant Python code execution environment with Docker-based sand
    uv pip install -r requirements.txt
    ```
 
-3. **Environment Setup** (optional):
+3. **Install Package in Editable Mode** (REQUIRED):
+   ```sh
+   uv pip install -e .
+   ```
+   
+   Or use the provided install script:
+   ```sh
+   ./install.sh
+   ```
+
+4. **Environment Setup** (optional):
    Create a `.env` file:
    ```env
    SANDBOX_TIMEOUT=300
@@ -65,12 +90,7 @@ A secure, MCP-compliant Python code execution environment with Docker-based sand
 
 ### Starting the Server
 
-**Standard MCP Server:**
-```sh
-python server.py
-```
-
-**FastMCP Server (Enhanced):**
+**FastMCP Server (Recommended):**
 ```sh
 python server_fastmcp.py
 ```
@@ -92,10 +112,10 @@ brew install node  # macOS
 #### Launching the Inspector
 ```sh
 # Start your MCP server in one terminal
-uv run server_fastmcp.py
+python server_fastmcp.py
 
 # Launch MCP Inspector in another terminal
-npx @modelcontextprotocol/inspector uv run server_fastmcp.py
+npx @modelcontextprotocol/inspector python server_fastmcp.py
 ```
 
 #### Accessing the Web Interface
@@ -148,7 +168,7 @@ http://127.0.0.1:6274 #local host address may be different for your machine
        sandbox_id=sandbox_id,
        code="""
        import numpy as np
-       arr = np.array([1, 2, 3])
+       arr = np.array([1, 2, 3, 4, 5])
        print({"sum": arr.sum()})
        """,
        timeout=30
@@ -224,19 +244,13 @@ Each sandbox runs in a Docker container with:
 - **Memory limits**: 512MB per sandbox
 - **CPU limits**: Restricted CPU usage
 
-## Implementation Options
-
-### Standard MCP Server (`server.py`)
-- Full MCP specification compliance
-- Explicit tool schemas
-- Comprehensive error handling
-- Production-ready implementation
+## Implementation
 
 ### FastMCP Server (`server_fastmcp.py`)
-- Simplified syntax with decorators
-- Enhanced security features
-- Better timeout handling
-- Faster development workflow
+- **Enhanced Implementation**: Uses FastMCP framework with decorators
+- **Better Security**: Enhanced security features and timeout handling
+- **Simplified Development**: Faster development workflow
+- **Production Ready**: Robust error handling and logging
 
 ## Development
 
@@ -252,8 +266,7 @@ omcp_py/
 │       │   └── sandbox_tools.py
 │       └── utils/
 │           └── config.py       # Configuration
-├── server.py                   # Standard MCP server
-├── server_fastmcp.py           # FastMCP server (enhanced)
+├── server_fastmcp.py           # FastMCP server (main)
 ├── Dockerfile                  # UV-based Docker build
 ├── requirements.txt
 └── pyproject.toml
