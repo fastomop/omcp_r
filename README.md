@@ -26,7 +26,7 @@ A secure, MCP-compliant Python code execution environment with Docker-based sand
   - `execute_python_code`: Run Python code in sandbox
   - `install_package`: Install Python packages in sandbox
 
-- **Enterprise Security Features**:
+- **Security Features**:
   - Docker-based isolation with enhanced security options
   - User isolation (sandboxuser instead of root)
   - Read-only filesystem with temporary writable areas
@@ -35,7 +35,7 @@ A secure, MCP-compliant Python code execution environment with Docker-based sand
   - Command injection protection (shlex.quote)
   - Resource limits (CPU, memory, execution timeouts)
   - Network isolation (network_mode="none")
-  - Input validation and sanitization
+  - Input validation and sanitisation
   - Auto-cleanup of inactive sandboxes
 
 - **MCP Integration**:
@@ -234,7 +234,7 @@ Each sandbox runs in a Docker container with:
 - **Command injection protection**: Uses `shlex.quote` for proper escaping
 - **List-form commands**: Prevents shell injection attacks
 - **Timeout handling**: Configurable execution timeouts
-- **Input validation**: Comprehensive input sanitization
+- **Input validation**: Comprehensive input sanitisation
 - **Error isolation**: Errors don't affect other sandboxes
 
 ### Resource Management
