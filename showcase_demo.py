@@ -264,9 +264,7 @@ def main():
     print("\n" + "=" * 60)
     print("🎉 DEMONSTRATION COMPLETE!")
     print("=" * 60)
-    print("The OMCP Python Sandbox is ready for production use!")
-    print("📹 Perfect for screen recording and presentations!")
-    print("🌐 Use MCP Inspector for interactive demonstrations!")
+
 
 if __name__ == "__main__":
     main() 
