@@ -65,7 +65,7 @@ Agent → FastMCP Server → Docker Containers → Flask Sandbox
 - **Server not starting**: Check logs in terminal
 - **Inspector not loading**: Restart with `npx` command
 
-## 📹 Demo Flow
+## Flow
 
 1. Show automated showcase (`python showcase_demo.py`)
 2. Open MCP Inspector (http://127.0.0.1:6274)
@@ -75,5 +75,3 @@ Agent → FastMCP Server → Docker Containers → Flask Sandbox
 6. Test error handling
 
 ---
-
-**Ready for your presentation! 🎯** 
