@@ -34,7 +34,7 @@ def test_server_status():
             print("   - Resource limits (CPU, memory)")
             print("   - Network isolation")
             print("\n🎯 Server is ready for MCP client connections!")
-            print("📹 Ready for screen recording!")
+
         else:
             print("❌ FastMCP server is not running")
             print("💡 Start it with: python server_fastmcp.py")
