@@ -1,0 +1,21 @@
+[project]
+name = "omcp_r"
+version = "0.1.0"
+description = "A secure, MCP-compliant R code execution sandbox with Docker-based isolation."
+authors = [
+    { name = "Z0shua",  }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+
+[project.dependencies]
+docker = "*"
+mcp = "*"
+python-dotenv = "*"
+
+[tool.setuptools]
+packages = ["omcp_r"]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta" 

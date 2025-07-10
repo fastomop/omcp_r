@@ -1,14 +1,14 @@
-version: '3'
-
+version: '3.8'
 services:
-  mcp-python-sandbox:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
+  omcp-r-sandbox:
+    build: .
+    environment:
+      - SANDBOX_TIMEOUT=300
+      - MAX_SANDBOXES=10
+      - DOCKER_IMAGE=rocker/r-ver:latest
+      - LOG_LEVEL=INFO
     volumes:
-      - node_modules:/app/node_modules
-
-volumes:
-  node_modules:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
