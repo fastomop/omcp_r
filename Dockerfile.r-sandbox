@@ -1,0 +1,23 @@
+# R Sandbox Dockerfile for OMOP CDM and PostgreSQL
+FROM rocker/tidyverse:latest
+
+# Install system dependencies for RPostgres and PostgreSQL client
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        libpq-dev \
+        postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install RPostgres package
+RUN R -e "install.packages('RPostgres', repos='https://cloud.r-project.org/')"
+
+# Create a non-root user for security
+RUN useradd -m sandboxuser && \
+    mkdir -p /sandbox && \
+    chown sandboxuser:sandboxuser /sandbox
+
+USER sandboxuser
+WORKDIR /sandbox
+
+# By default, do nothing (container will be started by Python with sleep/infinity)
+CMD ["sleep", "infinity"] 

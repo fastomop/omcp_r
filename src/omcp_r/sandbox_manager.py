@@ -35,12 +35,21 @@ class SandboxManager:
             raise RuntimeError("Maximum number of sandboxes reached")
         sandbox_id = str(uuid.uuid4())
         try:
+            # Pass DB connection info as environment variables
+            env_vars = {
+                "DB_HOST": self.config.db_host,
+                "DB_PORT": str(self.config.db_port),
+                "DB_USER": self.config.db_user,
+                "DB_PASSWORD": self.config.db_password,
+                "DB_NAME": self.config.db_name
+            }
             container = self.client.containers.run(
                 self.config.docker_image,
                 command=["sleep", "infinity"],
                 detach=True,
                 name=f"omcp-r-sandbox-{sandbox_id}",
-                network_mode="none",
+                # Enable networking for DB access (default bridge network)
+                # network_mode="none",  # <-- removed to allow DB access
                 mem_limit="512m",
                 cpu_period=100000,
                 cpu_quota=50000,
@@ -52,7 +61,8 @@ class SandboxManager:
                 tmpfs={
                     "/tmp": "rw,noexec,nosuid,size=100M",
                     "/sandbox": "rw,noexec,nosuid,size=500M"
-                }
+                },
+                environment=env_vars
             )
             self.sandboxes[sandbox_id] = {
                 "container": container,

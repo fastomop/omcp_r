@@ -112,6 +112,36 @@ This will use the `rocker/r-ver:latest` image for R code execution inside sandbo
 - Resource limits and automatic cleanup of inactive sandboxes.
 - Input validation and error handling throughout.
 
+## R Sandbox for OMOP CDM and PostgreSQL
+
+The R sandbox containers are built from a custom image (`omcp-r-sandbox:latest`) based on `rocker/tidyverse` with `RPostgres` preinstalled. This allows R code to connect to PostgreSQL databases (e.g., OMOP CDM).
+
+### Database Connection
+
+Database connection info is passed to the sandbox as environment variables:
+- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
+
+Example R code to connect:
+```r
+library(DBI)
+con <- dbConnect(
+  RPostgres::Postgres(),
+  host = Sys.getenv("DB_HOST"),
+  port = as.integer(Sys.getenv("DB_PORT")),
+  user = Sys.getenv("DB_USER"),
+  password = Sys.getenv("DB_PASSWORD"),
+  dbname = Sys.getenv("DB_NAME")
+)
+```
+
+### Installing Additional R Packages
+
+You can install additional R packages in your sandboxed R code using:
+```r
+install.packages("SomePackage")
+library(SomePackage)
+```
+
 ## Project Structure
 
 ```
