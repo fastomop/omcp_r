@@ -3,18 +3,19 @@ name = "omcp_r"
 version = "0.1.0"
 description = "A secure, MCP-compliant R code execution sandbox with Docker-based isolation."
 authors = [
-    { name = "Z0shua",  }
+    { name = "Z0shua" }
 ]
 readme = "README.md"
 requires-python = ">=3.10"
-
-[project.dependencies]
-docker = "*"
-mcp = "*"
-python-dotenv = "*"
-pyRserve = "*"
+dependencies = [
+    "docker",
+    "mcp",
+    "python-dotenv",
+    "pyRserve"
+]
 
 [tool.setuptools]
+package-dir = {"" = "src"}
 packages = ["omcp_r"]
 
 [build-system]
