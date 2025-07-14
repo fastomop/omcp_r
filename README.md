@@ -112,6 +112,38 @@ This will use the `rocker/r-ver:latest` image for R code execution inside sandbo
 - Resource limits and automatic cleanup of inactive sandboxes.
 - Input validation and error handling throughout.
 
+## Persistent R Sessions API
+
+The server now supports persistent, stateful R sessions. Each session is a dedicated Docker container running Rserve. You can connect to databases (e.g., PostgreSQL) and maintain state across multiple code executions.
+
+### API Tools
+
+- `create_session()`: Start a new R session (returns session_id)
+- `execute_in_session(session_id, code)`: Run R code in a session (state persists)
+- `list_sessions()`: List all active sessions
+- `close_session(session_id)`: Close and remove a session
+
+### Example Usage
+
+```python
+# Create a session
+result = await mcp.create_session()
+session_id = result["session_id"]
+
+# Execute R code in the session
+result = await mcp.execute_in_session(
+    session_id=session_id,
+    code="library(DBI); con <- dbConnect(RPostgres::Postgres(), host=Sys.getenv('DB_HOST'), dbname=Sys.getenv('DB_NAME'), user=Sys.getenv('DB_USER'), password=Sys.getenv('DB_PASSWORD')); dbListTables(con)"
+)
+print(result["result"])
+
+# List sessions
+sessions = await mcp.list_sessions()
+
+# Close the session
+await mcp.close_session(session_id=session_id)
+```
+
 ## R Sandbox for OMOP CDM and PostgreSQL
 
 The R sandbox containers are built from a custom image (`omcp-r-sandbox:latest`) based on `rocker/tidyverse` with `RPostgres` preinstalled. This allows R code to connect to PostgreSQL databases (e.g., OMOP CDM).

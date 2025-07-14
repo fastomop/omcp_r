@@ -12,6 +12,7 @@ requires-python = ">=3.10"
 docker = "*"
 mcp = "*"
 python-dotenv = "*"
+pyRserve = "*"
 
 [tool.setuptools]
 packages = ["omcp_r"]
