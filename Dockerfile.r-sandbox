@@ -1,23 +1,46 @@
-# R Sandbox Dockerfile for OMOP CDM and PostgreSQL
+# R Sandbox Dockerfile for OMOP CDM and PostgreSQL with Rserve
 FROM rocker/tidyverse:latest
 
-# Install system dependencies for RPostgres and PostgreSQL client
+# Install system dependencies
+# - libpq-dev: PostgreSQL
+# - openjdk-17-jdk: Java for OHDSI tools (DatabaseConnector, FeatureExtraction)
+# - libcairo2-dev, libxt-dev: Graphics
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        libpq-dev \
-        postgresql-client \
+    libpq-dev \
+    openjdk-17-jdk \
+    libcairo2-dev \
+    libxt-dev \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Install RPostgres package
-RUN R -e "install.packages('RPostgres', repos='https://cloud.r-project.org/')"
+# Configure Java for R
+RUN R CMD javareconf
+
+# Install RPostgres, Rserve, and OHDSI/DARWIN packages
+# remotes: for installing from GitHub if needed
+# DatabaseConnector: JDBC connectivity (requires Java)
+# SqlRender: SQL translation (requires Java)
+# CDMConnector: DARWIN standard package
+# omopgenerics: Core classes for OMOP
+RUN R -e "install.packages(c('RPostgres', 'Rserve', 'remotes', 'DatabaseConnector', 'SqlRender', 'CDMConnector', 'omopgenerics', 'dplyr', 'readr'), repos='https://cloud.r-project.org/')"
+
+# Create Rserve configuration
+RUN echo "remote enable" > /etc/Rserv.conf && \
+    echo "plaintext enable" >> /etc/Rserv.conf && \
+    echo "port 6311" >> /etc/Rserv.conf && \
+    echo "encoding utf8" >> /etc/Rserv.conf
 
 # Create a non-root user for security
-RUN useradd -m sandboxuser && \
+RUN useradd -m -u 1000 sandboxuser && \
     mkdir -p /sandbox && \
     chown sandboxuser:sandboxuser /sandbox
 
 USER sandboxuser
 WORKDIR /sandbox
 
-# By default, do nothing (container will be started by Python with sleep/infinity)
-CMD ["sleep", "infinity"] 
+# Expose Rserve port
+EXPOSE 6311
+
+# Start Rserve in foreground mode
+CMD ["R", "-e", "Rserve::run.Rserve(port=6311, args='--vanilla')"]

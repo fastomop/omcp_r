@@ -1,195 +1,72 @@
 # OMCP R Sandbox Server
 
-A secure, MCP-compliant R code execution environment with Docker-based sandboxing. This server implements the Model Context Protocol (MCP) specification for safe, isolated R code execution with enterprise-grade security features.
+A secure, MCP-compliant R code execution environment specialized for **OMOP CDM** and **DARWIN EU®** analytics. This server implements the Model Context Protocol (MCP) for safe, isolated, and stateful R session management.
 
-## Features
+## 🌟 Key Features
 
-- **MCP-Compliant Tools**:
-  - `create_sandbox`: Create isolated R environments
-  - `list_sandboxes`: List active sandboxes with status
-  - `remove_sandbox`: Safely remove sandboxes
-  - `execute_r_code`: Run R code in sandbox
+- **OMOP/DARWIN Specialized**: Pre-configured with OHDSI HADES and DARWIN R packages (`CDMConnector`, `DatabaseConnector`, `SqlRender`, etc.) and Java 17.
+- **Persistent R Sessions**: Maintain state across multiple code executions using Docker-based Rserve containers.
+- **File Management**: Built-in tools to upload cohort definitions, list sandbox files, and retrieve analysis results (CSVs, figures, etc.).
+- **Enterprise-Grade Security**: 
+  - Docker isolation with non-root user (UID 1000).
+  - Read-only root filesystem with limited writable `tmpfs`.
+  - Dropped Linux capabilities and no privilege escalation.
+  - Network isolation (configurable) and resource limits (CPU/Memory).
+- **Standardized Connectivity**: Ready for PostgreSQL/OMOP CDM databases with environment-based configuration.
 
-- **Security Features**:
-  - Docker-based isolation with enhanced security options
-  - User isolation (non-root user)
-  - Read-only filesystem with temporary writable areas
-  - Dropped Linux capabilities (cap_drop=["ALL"])
-  - No privilege escalation (no-new-privileges)
-  - Resource limits (CPU, memory, execution timeouts)
-  - Network isolation (network_mode="none")
-  - Input validation and sanitisation
-  - Auto-cleanup of inactive sandboxes
+## 🛠️ MCP Tools
 
-- **MCP Integration**:
-  - Standard MCP tool interface
-  - Proper error handling with timeout support
-  - Structured logging
-  - Type-safe responses
-  - JSON output support
+The server exposes the following tools to any MCP client:
 
-## Prerequisites
+| Tool | Description |
+|------|-------------|
+| `create_session` | Start a new persistent R session (Docker container). |
+| `execute_in_session` | Run R code in a session. State (variables, libraries) persists. |
+| `list_sessions` | List all active R sessions and their metadata. |
+| `close_session` | Safely stop and remove an R session. |
+| `list_session_files` | List files in the session's workspace. |
+| `read_session_file` | Read the content of a file (e.g., analysis results). |
+| `write_session_file` | Upload a file to the sandbox (e.g., JSON cohort). |
 
-- **Python 3.10+** (for MCP server)
-- **Docker** (for sandbox isolation)
-- **uv** (for dependency management)
+## 🚀 Quick Start
 
-## Installation
+### Prerequisites
+- **Docker** and **Docker Compose**
+- **Python 3.10+**
+- **uv** (recommended for Python dependency management)
 
-1. **Clone the Repository**:
-   ```sh
-   git clone https://github.com/Z0shua/omcp_r.git
-   cd omcp_r
-   ```
-
-2. **Install Dependencies** (using uv):
-   ```sh
-   uv pip install -e .
-   ```
-
-3. **Environment Setup** (optional):
-   Create a `.env` file or edit `sample.env`:
-   ```env
-   SANDBOX_TIMEOUT=300
-   MAX_SANDBOXES=10
-   DOCKER_IMAGE=rocker/r-ver:latest
-   LOG_LEVEL=INFO
-   ```
-
-## Usage
-
-### Starting the Server
-
+### 1. Installation
 ```sh
-python src/omcp_r/main.py
+git clone https://github.com/Z0shua/omcp_r.git
+cd omcp_r
+uv pip install -e .
 ```
 
-### Using Docker Compose
+### 2. Environment Setup
+Copy `sample.env` to `.env` and configure your database and Docker settings:
+```env
+DOCKER_IMAGE=omcp-r-sandbox:latest
+SANDBOX_TIMEOUT=300
+DB_HOST=your-postgres-host
+DB_NAME=cdm_database
+# ... see sample.env for all options
+```
 
-You can also run the server with Docker Compose:
-
+### 3. Build & Run
+Use Docker Compose to build the specialized R sandbox image and start the MCP server:
 ```sh
 docker-compose up --build
 ```
 
-This will use the `rocker/r-ver:latest` image for R code execution inside sandboxes.
+## 📖 Documentation
 
-### Tool Examples
+For detailed guides, please refer to the [docs/](docs/README.md) directory:
+- [Architecture Overview](docs/architecture.md)
+- [API Reference](docs/api-reference.md)
+- [Implementation Details](docs/implementation.md)
+- [Security Model](docs/security.md)
+- [Configuration Guide](docs/configuration.md)
+- [Deployment Guide](docs/deployment.md)
 
-1. **Create a Sandbox**:
-   ```python
-   result = await mcp.create_sandbox()
-   sandbox_id = result["sandbox_id"]
-   ```
-
-2. **Execute R Code**:
-   ```python
-   result = await mcp.execute_r_code(
-       sandbox_id=sandbox_id,
-       code="cat(mean(c(1,2,3,4,5)))",
-       timeout=30
-   )
-   print(result["output"])
-   ```
-
-3. **List Sandboxes**:
-   ```python
-   sandboxes = await mcp.list_sandboxes(include_inactive=False)
-   ```
-
-4. **Remove a Sandbox**:
-   ```python
-   await mcp.remove_sandbox(
-       sandbox_id=sandbox_id,
-       force=False
-   )
-   ```
-
-## Security
-
-- Each sandbox runs in a Docker container with strict isolation.
-- Non-root user, read-only filesystem, dropped capabilities, and no network access.
-- Resource limits and automatic cleanup of inactive sandboxes.
-- Input validation and error handling throughout.
-
-## Persistent R Sessions API
-
-The server now supports persistent, stateful R sessions. Each session is a dedicated Docker container running Rserve. You can connect to databases (e.g., PostgreSQL) and maintain state across multiple code executions.
-
-### API Tools
-
-- `create_session()`: Start a new R session (returns session_id)
-- `execute_in_session(session_id, code)`: Run R code in a session (state persists)
-- `list_sessions()`: List all active sessions
-- `close_session(session_id)`: Close and remove a session
-
-### Example Usage
-
-```python
-# Create a session
-result = await mcp.create_session()
-session_id = result["session_id"]
-
-# Execute R code in the session
-result = await mcp.execute_in_session(
-    session_id=session_id,
-    code="library(DBI); con <- dbConnect(RPostgres::Postgres(), host=Sys.getenv('DB_HOST'), dbname=Sys.getenv('DB_NAME'), user=Sys.getenv('DB_USER'), password=Sys.getenv('DB_PASSWORD')); dbListTables(con)"
-)
-print(result["result"])
-
-# List sessions
-sessions = await mcp.list_sessions()
-
-# Close the session
-await mcp.close_session(session_id=session_id)
-```
-
-## R Sandbox for OMOP CDM and PostgreSQL
-
-The R sandbox containers are built from a custom image (`omcp-r-sandbox:latest`) based on `rocker/tidyverse` with `RPostgres` preinstalled. This allows R code to connect to PostgreSQL databases (e.g., OMOP CDM).
-
-### Database Connection
-
-Database connection info is passed to the sandbox as environment variables:
-- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
-
-Example R code to connect:
-```r
-library(DBI)
-con <- dbConnect(
-  RPostgres::Postgres(),
-  host = Sys.getenv("DB_HOST"),
-  port = as.integer(Sys.getenv("DB_PORT")),
-  user = Sys.getenv("DB_USER"),
-  password = Sys.getenv("DB_PASSWORD"),
-  dbname = Sys.getenv("DB_NAME")
-)
-```
-
-### Installing Additional R Packages
-
-You can install additional R packages in your sandboxed R code using:
-```r
-install.packages("SomePackage")
-library(SomePackage)
-```
-
-## Project Structure
-
-```
-omcp_r/
-├── src/
-│   └── omcp_r/
-│       ├── main.py              # FastMCP server for R sandbox
-│       ├── sandbox_manager.py   # Docker-based R sandbox manager
-│       └── config.py            # Configuration loader
-├── docs/                       # Documentation
-├── Dockerfile                  # Docker image for the R sandbox
-├── docker-compose.yml          # Docker Compose configuration
-├── sample.env                  # Example environment configuration
-├── pyproject.toml              # Project metadata and dependencies
-└── README.md                   # Project overview and documentation index
-```
-
-## License
+## ⚖️ License
 MIT

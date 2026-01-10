@@ -106,6 +106,94 @@ class SessionManager:
             logger.error(f"Failed to execute R code in session {session_id}: {e}")
             return {"success": False, "error": str(e)}
 
+    def list_files(self, session_id: str, path: str = ".") -> list:
+        if session_id not in self.sessions:
+            raise ValueError(f"Session {session_id} not found")
+        
+        container = self.sessions[session_id]["container"]
+        # Use ls -F to distinguish directories
+        exec_result = container.exec_run(["ls", "-F", path])
+        if exec_result.exit_code != 0:
+            raise Exception(f"Failed to list files: {exec_result.output.decode()}")
+            
+        output = exec_result.output.decode()
+        files = []
+        for line in output.splitlines():
+            line = line.strip()
+            if not line: continue
+            is_dir = line.endswith('/')
+            name = line[:-1] if is_dir else line
+            files.append({
+                "name": name,
+                "is_dir": is_dir,
+                "path": os.path.join(path, name) if path != "." else name
+            })
+        return files
+
+    def read_file(self, session_id: str, path: str) -> str:
+        if session_id not in self.sessions:
+            raise ValueError(f"Session {session_id} not found")
+            
+        container = self.sessions[session_id]["container"]
+        # Use tar to extract file content
+        try:
+            bits, stat = container.get_archive(path)
+            import io
+            import tarfile
+            
+            file_obj = io.BytesIO()
+            for chunk in bits:
+                file_obj.write(chunk)
+            file_obj.seek(0)
+            
+            with tarfile.open(fileobj=file_obj) as tar:
+                # The tar contains the file with its basename
+                member = tar.next()
+                f = tar.extractfile(member)
+                content = f.read().decode('utf-8', errors='replace')
+                return content
+        except Exception as e:
+            raise Exception(f"Failed to read file {path}: {str(e)}")
+
+    def write_file(self, session_id: str, path: str, content: str) -> bool:
+        if session_id not in self.sessions:
+            raise ValueError(f"Session {session_id} not found")
+            
+        container = self.sessions[session_id]["container"]
+        try:
+            # Create a tar archive in memory with the file
+            import io
+            import tarfile
+            import time
+            
+            dirname = os.path.dirname(path)
+            basename = os.path.basename(path)
+            
+            # If path has directory, ensure it exists
+            if dirname and dirname != ".":
+                 container.exec_run(["mkdir", "-p", dirname])
+            
+            data = content.encode('utf-8')
+            file_obj = io.BytesIO(data)
+            
+            tar_stream = io.BytesIO()
+            with tarfile.open(fileobj=tar_stream, mode='w') as tar:
+                tarinfo = tarfile.TarInfo(name=basename)
+                tarinfo.size = len(data)
+                tarinfo.mtime = time.time()
+                tar.addfile(tarinfo, file_obj)
+            
+            tar_stream.seek(0)
+            
+            # Put archive into container
+            # If dirname is empty, put in workdir (which is default destination)
+            dest = dirname if dirname else "/sandbox"
+            
+            container.put_archive(dest, tar_stream)
+            return True
+        except Exception as e:
+            raise Exception(f"Failed to write file {path}: {str(e)}")
+
     def list_sessions(self) -> list:
         return [
             {

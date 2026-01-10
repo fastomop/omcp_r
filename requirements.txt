@@ -1,0 +1,5 @@
+# OMCP R Sandbox Dependencies
+docker>=7.0.0
+mcp>=1.0.0
+python-dotenv>=1.0.0
+pyRserve>=1.0.0

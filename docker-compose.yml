@@ -1,14 +1,28 @@
 version: '3.8'
+
 services:
-  omcp-r-sandbox:
-    build: .
+  # MCP Server - runs the Python MCP server
+  omcp-r-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
     environment:
       - SANDBOX_TIMEOUT=300
       - MAX_SANDBOXES=10
-      - DOCKER_IMAGE=rocker/r-ver:latest
+      - DOCKER_IMAGE=omcp-r-sandbox:latest
       - LOG_LEVEL=INFO
+      - DOCKER_HOST=unix:///var/run/docker.sock
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    ports:
-      - "8080:8080"
+    depends_on:
+      - omcp-r-sandbox-builder
     restart: unless-stopped
+
+  # This service just builds the R sandbox image
+  omcp-r-sandbox-builder:
+    build:
+      context: .
+      dockerfile: Dockerfile.r-sandbox
+    image: omcp-r-sandbox:latest
+    command: [ "echo", "R sandbox image built successfully" ]
+    restart: "no"

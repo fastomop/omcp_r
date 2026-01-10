@@ -1,47 +1,47 @@
 # Architecture Overview - OMCP R Sandbox
 
-This document describes the high-level architecture and design principles of the OMCP R Sandbox.
+This document describes the high-level architecture of the OMCP R Sandbox, focusing on the stateful session model using Rserve.
 
 ## System Overview
 
-The OMCP R Sandbox provides a secure, containerized environment for executing R code via the Model Context Protocol (MCP). It is designed for safe, isolated, and resource-limited code execution, suitable for AI agents and automated workflows.
+The OMCP R Sandbox provides a secure, stateful environment for executing R code via the Model Context Protocol (MCP). Unlike simple "execute-and-forget" sandboxes, it maintains persistent R environments (sessions) that allow for iterative analysis, which is critical for complex OHDSI/DARWIN workflows.
 
 ## Key Components
 
-- **FastMCP Server** (`src/omcp_r/main.py`): Implements the MCP server and exposes tools for sandbox management and R code execution.
-- **Sandbox Manager** (`src/omcp_r/sandbox_manager.py`): Handles Docker container lifecycle, including creation, execution, and cleanup of R sandboxes.
-- **Configuration System** (`src/omcp_r/config.py`): Loads environment-based configuration for timeouts, resource limits, and Docker image selection.
+- **FastMCP Server** (`src/omcp_r/main.py`): The core service that exposes MCP tools for session management, code execution, and file I/O.
+- **Session Manager** (`src/omcp_r/sandbox_manager.py`): A Python component that manages the lifecycle of Docker containers and communicates with them via the Rserve protocol.
+- **R Sandbox Container**: A specialized Docker container running **Rserve**. Each session gets its own isolated container.
+- **Configuration System** (`src/omcp_r/config.py`): Centralized management of environment-based settings.
 
 ## Component Interactions
 
 ```mermaid
 graph TD;
-  Client["MCP Client"] -->|MCP Request| FastMCP["FastMCP Server (main.py)"]
-  FastMCP -->|Sandbox Management| SandboxManager["Sandbox Manager (sandbox_manager.py)"]
-  SandboxManager -->|Docker API| Docker["Docker Daemon"]
-  Docker -->|Container| RContainer["R Sandbox Container"]
+  Client["MCP Client (e.g., AI Agent)"] -->|MCP Request| FastMCP["FastMCP Server"]
+  FastMCP -->|Manage Sessions| SessionManager["Session Manager"]
+  SessionManager -->|Docker API| Docker["Docker Daemon"]
+  SessionManager -->|pyRserve (TCP)| RContainer["R Sandbox (Rserve)"]
+  Docker -->|Spawn| RContainer
 ```
 
-## Sandbox Lifecycle
+## Session Lifecycle
 
-1. **Create Sandbox**: FastMCP tool requests SandboxManager to create a new R sandbox (Docker container).
-2. **Execute R Code**: FastMCP tool sends R code to SandboxManager, which executes it in the specified container using `Rscript -e`.
-3. **List Sandboxes**: FastMCP tool queries SandboxManager for active sandboxes and their metadata.
-4. **Remove Sandbox**: FastMCP tool instructs SandboxManager to stop and remove a sandbox container.
+1. **Create Session**: `SessionManager` requests the Docker Daemon to start a container from the specialized `omcp-r-sandbox` image. Docker maps the container's Rserve port (6311) to a random host port.
+2. **Execute Code**: `SessionManager` uses `pyRserve` to connect to the mapped host port and evaluate R code inside the container. State (variables, loaded libraries) is maintained as long as the container is running.
+3. **File I/O**: The server uses Docker's archive API to securely move files between the host and the container. This allows uploading JSON cohort definitions or downloading CSV results.
+4. **Cleanup**: Sessions are automatically closed based on inactivity (timeout) or an explicit `close_session` request. Containers are removed (`--remove`) upon stopping.
 
-## Security and Isolation
+## Network and Communication
 
-- **Network Isolation**: Containers run with no network access (`network_mode="none"`).
-- **Resource Limits**: Memory and CPU limits are enforced per container.
-- **User Isolation**: Containers run as a non-root user (UID 1000).
-- **Filesystem Security**: Read-only root filesystem with limited writable tmpfs mounts.
-- **Capability Dropping**: All Linux capabilities are dropped.
-- **No Privilege Escalation**: Containers are started with `no-new-privileges` security option.
+- **Rserve Implementation**: The sandbox uses Rserve to allow persistent state. The Python bridge (`pyRserve`) communicates with Rserve over a dynamically assigned TCP port.
+- **Dynamic Port Mapping**: To prevent conflicts between multiple sessions, the system relies on Docker to assign ephemeral ports on the host.
 
-## Extensibility
+## Specialization: OMOP/DARWIN
 
-The architecture is modular, allowing for future extension (e.g., additional R tools, package installation, or integration with other MCP agents).
+The architecture is specifically tailored for health data sciences:
+- **JDBC Ready**: Containers include Java 17, allowing packages like `DatabaseConnector` to connect to external OMOP repositories.
+- **Artifact Retrieval**: The file management tools are designed to pull large analysis results (CSVs, figures) generated by DARWIN tools.
 
 ---
 
-For more details, see the [Implementation Details](implementation.md) and [Security Model](security.md). 
+For implementation details, see [Implementation Details](implementation.md).

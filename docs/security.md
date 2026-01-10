@@ -1,27 +1,44 @@
 # Security Model - OMCP R Sandbox
 
-This document describes the security architecture of the OMCP R Sandbox.
+Security is a primary design goal, ensuring that untrusted R code cannot compromise the host system while still allowing it to perform intensive OMOP analytics.
 
-## Security Overview
+## 🛡️ Container Isolation
 
-The OMCP R Sandbox is designed for safe, isolated R code execution using Docker containers. The following security measures are enforced:
+Each R session runs in a dedicated Docker container with the following restrictions:
 
-- **Network Isolation**: Containers run with no network access (`network_mode="none"`).
-- **Resource Limits**: Each container is limited in memory and CPU usage.
-- **User Isolation**: Containers run as a non-root user (UID 1000).
-- **Read-only Filesystem**: The root filesystem is read-only, with limited writable tmpfs mounts for `/tmp` and `/sandbox`.
+- **User Isolation**: Containers run as a non-root user (`sandboxuser`, UID 1000).
 - **Dropped Capabilities**: All Linux capabilities are dropped (`cap_drop=["ALL"]`).
 - **No Privilege Escalation**: Containers are started with `no-new-privileges`.
-- **Automatic Cleanup**: Inactive sandboxes are automatically removed after a timeout.
-- **Input Validation**: All user input (R code, parameters) is validated before execution.
-- **Comprehensive Logging**: All actions and errors are logged for audit and debugging.
+- **Read-only Filesystem**: The root filesystem is read-only. Writable areas are limited to high-performance `tmpfs` mounts:
+  - `/tmp`: 100MB (noexec, nosuid)
+  - `/sandbox`: 500MB (noexec, nosuid)
+- **Network Isolation**: By default, containers have no network access unless configured via Docker Compose.
 
-## Security Best Practices
+## 🧠 Resource Management
 
-- Always keep Docker and system packages up to date.
-- Use strong resource limits to prevent abuse.
-- Monitor logs for unusual activity.
+To prevent Denial of Service (DoS) attacks:
+- **Memory Limits**: Each container is capped at `512MB` of RAM.
+- **CPU Limits**: Containers are restricted to `0.5` CPU cores (`cpu_quota=50000`).
+- **Auto-Cleanup**: The `SessionManager` monitors activity and removes containers that have been idle past the `SANDBOX_TIMEOUT`.
+
+## 📂 File I/O Security
+
+The server provides tools for reading and writing files. This is handled via the Docker API:
+- **Scope Restriction**: File operations are restricted to the container's filesystem.
+- **Buffered Transfers**: Files are moved as base64-encoded strings or text, preventing direct filesystem mounting risks.
+- **Atomic Operations**: Writing files uses Docker's archive mechanism, which is more secure than simple stream redirection.
+
+## 📝 Audit and Logging
+
+- **FastMCP Logging**: All MCP tool calls are logged with their parameters (excluding sensitive data like passwords).
+- **Rserve Logs**: R output and errors are captured and returned to the MCP client.
+- **Docker Events**: Container lifecycle events (start/stop) are visible in the host's Docker logs.
+
+## ⚠️ Known Limitations & Best Practices
+
+- **Database Credentials**: Database passwords are passed via environment variables. Ensure the host environment is secure.
+- **Network Access**: If `DatabaseConnector` requires network access to hit an external CDM, careful VPC or Docker network rules should be applied.
 
 ---
 
-For more details, see the [Implementation Details](implementation.md) and [Configuration Guide](configuration.md). 
+For more information, see the [Configuration Guide](configuration.md).

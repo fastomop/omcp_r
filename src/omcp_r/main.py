@@ -103,4 +103,64 @@ async def execute_in_session(session_id: str, code: str) -> Dict[str, Any]:
         return {
             "success": False,
             "error": str(e)
-        } 
+        }
+
+@mcp.tool()
+async def list_session_files(session_id: str, path: str = ".") -> Dict[str, Any]:
+    """
+    List files in a session's working directory.
+    """
+    try:
+        files = session_manager.list_files(session_id, path)
+        return {
+            "success": True,
+            "files": files
+        }
+    except Exception as e:
+        logger.error(f"Failed to list files in session {session_id}: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+@mcp.tool()
+async def read_session_file(session_id: str, path: str) -> Dict[str, Any]:
+    """
+    Read the content of a file from the session. 
+    Currently supports text files.
+    """
+    try:
+        content = session_manager.read_file(session_id, path)
+        return {
+            "success": True,
+            "content": content
+        }
+    except Exception as e:
+        logger.error(f"Failed to read file {path} in session {session_id}: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+@mcp.tool()
+async def write_session_file(session_id: str, path: str, content: str) -> Dict[str, Any]:
+    """
+    Write content to a file in the session.
+    """
+    try:
+        session_manager.write_file(session_id, path, content)
+        return {
+            "success": True,
+            "message": f"Successfully wrote to {path}"
+        }
+    except Exception as e:
+        logger.error(f"Failed to write file {path} in session {session_id}: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+if __name__ == "__main__":
+    logger.info("Starting OMCP R Sandbox MCP Server...")
+    mcp.run() 
