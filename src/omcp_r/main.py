@@ -161,6 +161,37 @@ async def write_session_file(session_id: str, path: str, content: str) -> Dict[s
         }
 
 
+@mcp.tool()
+async def install_package(session_id: str, package_name: str, source: str = "CRAN") -> Dict[str, Any]:
+    """
+    Install an R package dynamically in the session.
+    Source can be "CRAN" or "GitHub" (e.g. "ohdsi/CommonDataModel").
+    Uses GITHUB_PAT env var if available for GitHub.
+    """
+    try:
+        install_cmd = ""
+        if source.upper() == "CRAN":
+            install_cmd = f'install.packages("{package_name}", repos="https://cloud.r-project.org")'
+        elif source.upper() == "GITHUB":
+            install_cmd = f'remotes::install_github("{package_name}", auth_token=Sys.getenv("GITHUB_PAT"))'
+        else:
+            return {"success": False, "error": "Invalid source. Use CRAN or GitHub."}
+            
+        result = session_manager.execute_in_session(session_id, install_cmd)
+        
+        if result["success"]:
+             return {"success": True, "message": f"Installed {package_name}", "output": result.get("output", "")}
+        else:
+             return {"success": False, "error": result.get("error"), "output": result.get("output", "")}
+             
+    except Exception as e:
+        logger.error(f"Failed to install package {package_name} in session {session_id}: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
 if __name__ == "__main__":
     logger.info("Starting OMCP R Sandbox MCP Server...")
     mcp.run() 

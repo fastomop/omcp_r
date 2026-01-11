@@ -17,6 +17,16 @@ class RConfig:
         self.db_password = os.getenv("DB_PASSWORD", "")
         self.db_name = os.getenv("DB_NAME", "")
 
+        self.workspace_root = os.getenv("WORKSPACE_ROOT")
+        if self.workspace_root:
+            self.workspace_root = os.path.abspath(self.workspace_root)
 
 def get_config():
-    return RConfig() 
+    config = RConfig()
+    if config.workspace_root and not os.path.exists(config.workspace_root):
+        try:
+            os.makedirs(config.workspace_root)
+            logging.info(f"Created workspace root at {config.workspace_root}")
+        except Exception as e:
+            logging.warning(f"Could not create workspace root: {e}")
+    return config 

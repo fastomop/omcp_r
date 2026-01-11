@@ -28,13 +28,19 @@ graph TD;
 
 1. **Create Session**: `SessionManager` requests the Docker Daemon to start a container from the specialized `omcp-r-sandbox` image. Docker maps the container's Rserve port (6311) to a random host port.
 2. **Execute Code**: `SessionManager` uses `pyRserve` to connect to the mapped host port and evaluate R code inside the container. State (variables, loaded libraries) is maintained as long as the container is running.
-3. **File I/O**: The server uses Docker's archive API to securely move files between the host and the container. This allows uploading JSON cohort definitions or downloading CSV results.
-4. **Cleanup**: Sessions are automatically closed based on inactivity (timeout) or an explicit `close_session` request. Containers are removed (`--remove`) upon stopping.
+3. **File I/O and Persistence**: 
+    - **Ephemeral**: By default, `/sandbox` is a `tmpfs` mount (data lost on close).
+    - **Persistent Workspaces**: If `WORKSPACE_ROOT` is configured, the server bind-mounts a host directory to `/sandbox`. This allows files to persist across session restarts and enables easy bulk data transfer.
+    - **Transfer**: The server also uses Docker's archive API for secure, individual file transfers.
+4. **Robust Output Capturing**: Code execution is wrapped in an R-side `capture.output` and `tryCatch` block. This ensures that `stdout`, `stderr`, and error messages are recorded and returned to the client as a structured log.
+5. **Cleanup**: Sessions are automatically closed based on inactivity (timeout) or an explicit `close_session` request. Containers are removed (`--remove`) upon stopping unless persistent workspaces are used (in which case only the container is removed, but the data remains on the host).
 
 ## Network and Communication
 
 - **Rserve Implementation**: The sandbox uses Rserve to allow persistent state. The Python bridge (`pyRserve`) communicates with Rserve over a dynamically assigned TCP port.
 - **Dynamic Port Mapping**: To prevent conflicts between multiple sessions, the system relies on Docker to assign ephemeral ports on the host.
+- **Database Proxying**: To simplify connecting to host-resident databases, the server automatically detects `localhost` in `DB_HOST` and maps it to `host.docker.internal` within the container.
+
 
 ## Specialization: OMOP/DARWIN
 

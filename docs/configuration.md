@@ -11,6 +11,7 @@ The OMCP R Sandbox is configured primarily through environment variables. This g
 | `DOCKER_IMAGE` | str | `omcp-r-sandbox:latest` | The name of the Docker image to use for R sessions. |
 | `LOG_LEVEL` | str | `INFO` | Logging verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`). |
 | `DOCKER_HOST` | str | `unix://var/run/docker.sock` | Connection string for the Docker daemon. |
+| `WORKSPACE_ROOT` | str | `""` | Local absolute path to store persistent session workspaces (e.g. `/tmp/sandboxes`). |
 
 ## OMOP/DARWIN Database Settings
 

@@ -38,6 +38,12 @@ The server will be available as an MCP host. If you are using it with a client (
 
 ## Production Considerations
 
+### Persistent Workspace Setup
+To enable persistent data across sessions:
+1.  Create a directory on your host (e.g., `./workspaces`).
+2.  Set `WORKSPACE_ROOT=/path/to/workspaces` in your `.env`.
+3.  The server will create a unique subdirectory for each session ID within that root.
+
 ### Docker Socket Security
 The server requires access to `/var/run/docker.sock` to manage sessions. In production, ensure that the user running the server has the minimum necessary permissions. Consider using a Docker socket proxy for enhanced security.
 

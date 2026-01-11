@@ -6,13 +6,15 @@ A secure, MCP-compliant R code execution environment specialized for **OMOP CDM*
 
 - **OMOP/DARWIN Specialized**: Pre-configured with OHDSI HADES and DARWIN R packages (`CDMConnector`, `DatabaseConnector`, `SqlRender`, etc.) and Java 17.
 - **Persistent R Sessions**: Maintain state across multiple code executions using Docker-based Rserve containers.
-- **File Management**: Built-in tools to upload cohort definitions, list sandbox files, and retrieve analysis results (CSVs, figures, etc.).
+- **Robust Output Capturing**: Captures `stdout` and `stderr` (e.g., `print()`, `summary()`, and OHDSI logs) and returns them alongside execution results.
+- **Persistent Workspaces**: Support for host bind-mounts to preserve files across session lifecycles.
+- **File Management**: Built-in tools to upload cohort definitions, list sandbox files, and retrieve analysis results.
 - **Enterprise-Grade Security**: 
   - Docker isolation with non-root user (UID 1000).
   - Read-only root filesystem with limited writable `tmpfs`.
   - Dropped Linux capabilities and no privilege escalation.
   - Network isolation (configurable) and resource limits (CPU/Memory).
-- **Standardized Connectivity**: Ready for PostgreSQL/OMOP CDM databases with environment-based configuration.
+- **Standardized Connectivity**: Ready for PostgreSQL/OMOP CDM databases with auto-proxying for `localhost` connections to `host.docker.internal`.
 
 ## 🛠️ MCP Tools
 
@@ -21,12 +23,13 @@ The server exposes the following tools to any MCP client:
 | Tool | Description |
 |------|-------------|
 | `create_session` | Start a new persistent R session (Docker container). |
-| `execute_in_session` | Run R code in a session. State (variables, libraries) persists. |
+| `execute_in_session` | Run R code in a session. State persists and output is captured. |
 | `list_sessions` | List all active R sessions and their metadata. |
 | `close_session` | Safely stop and remove an R session. |
 | `list_session_files` | List files in the session's workspace. |
 | `read_session_file` | Read the content of a file (e.g., analysis results). |
 | `write_session_file` | Upload a file to the sandbox (e.g., JSON cohort). |
+| `install_package` | Install R packages dynamically from CRAN or GitHub. |
 
 ## 🚀 Quick Start
 

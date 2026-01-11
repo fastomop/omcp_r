@@ -183,6 +183,26 @@ Writes content to a file in the session.
 }
 ```
 
+### 8. install_package
+
+Installs an R package dynamically (CRAN or GitHub).
+
+#### Parameters
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| session_id | str | Yes | - | Session ID |
+| package_name | str | Yes | - | Name of package (e.g. "jsonlite" or "ohdsi/CommonDataModel") |
+| source | str | No | "CRAN" | "CRAN" or "GITHUB" |
+
+#### Returns
+```json
+{
+    "success": true,
+    "message": "Installed jsonlite",
+    "output": "..."
+}
+```
+
 ## Session Lifecycle
 
 1. **Create Session**: Creates a Docker container running Rserve

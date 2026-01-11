@@ -106,6 +106,9 @@ The sandbox is optimized for OHDSI/DARWIN analytics:
 - **Java 17**: Pre-installed for `DatabaseConnector`, `FeatureExtraction`, etc.
 - **R Packages**: `CDMConnector`, `DatabaseConnector`, `SqlRender`, `omopgenerics` pre-installed.
 - **File Management**: Tools to upload cohort definitions and download results.
+- **Output Capturing**: `stdout` and `stderr` are captured and returned with the result, enabling debugging of `print()` statements and OHDSI logs.
+- **Persistent Workspaces**: Sessions can mount a host directory (`WORKSPACE_ROOT`) to `/sandbox`, ensuring files persist after the session closes.
+- **Auto-Proxying**: Connecting to `localhost` database automatically maps to `host.docker.internal` for seamless local testing.
 
 ## Configuration System
 

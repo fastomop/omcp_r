@@ -35,13 +35,29 @@ class SessionManager:
             raise RuntimeError("Maximum number of sessions reached")
         session_id = str(uuid.uuid4())
         try:
+            # Database Proxying: Replace localhost with host.docker.internal
+            db_host = self.config.db_host
+            extra_hosts = {}
+            if db_host in ["localhost", "127.0.0.1"]:
+                db_host = "host.docker.internal"
+                extra_hosts = {"host.docker.internal": "host-gateway"}
+
             env_vars = {
-                "DB_HOST": self.config.db_host,
+                "DB_HOST": db_host,
                 "DB_PORT": str(self.config.db_port),
                 "DB_USER": self.config.db_user,
                 "DB_PASSWORD": self.config.db_password,
                 "DB_NAME": self.config.db_name
             }
+            
+            # Persistent Workspace
+            volumes = {}
+            if self.config.workspace_root:
+                session_dir = os.path.join(self.config.workspace_root, session_id)
+                os.makedirs(session_dir, exist_ok=True)
+                # Mount as R/W
+                volumes[session_dir] = {'bind': '/sandbox', 'mode': 'rw'}
+                
             # Expose Rserve port (default 6311)
             ports = {'6311/tcp': None}  # Let Docker assign a random host port
             container = self.client.containers.run(
@@ -52,16 +68,19 @@ class SessionManager:
                 cpu_period=100000,
                 cpu_quota=50000,
                 remove=True,
-                user=1000,
+                user=1000, # sandboxuser
                 read_only=True,
                 cap_drop=["ALL"],
                 security_opt=["no-new-privileges"],
                 tmpfs={
                     "/tmp": "rw,noexec,nosuid,size=100M",
-                    "/sandbox": "rw,noexec,nosuid,size=500M"
+                    # only mount /sandbox as tmpfs if NO workspace_volume is used
+                    **({"/sandbox": "rw,noexec,nosuid,size=500M"} if not volumes else {})
                 },
                 environment=env_vars,
-                ports=ports
+                ports=ports,
+                volumes=volumes,
+                extra_hosts=extra_hosts
             )
             # Get the mapped host port for Rserve
             container.reload()
@@ -97,11 +116,47 @@ class SessionManager:
         session["last_used"] = datetime.now()
         host = "localhost"
         port = int(session["host_port"])
+        
+        # Wrap code to capture output (stdout/stderr) and exception handling
+        # We use a textConnection to capture stdout, and tryCatch for errors
+        wrapped_code = f"""
+        output_con <- textConnection("captured_output", "w", local = TRUE)
+        sink(output_con)
+        sink(output_con, type = "message")
+        result <- tryCatch({{
+            {code}
+        }}, error = function(e) {{
+            return(list(error = as.character(e)))
+        }}, finally = {{
+            sink(type = "message")
+            sink()
+            close(output_con)
+        }})
+        list(output = paste(captured_output, collapse = "\\n"), result = result)
+        """
+        
         try:
             conn = pyRserve.connect(host=host, port=port)
-            result = conn.eval(code)
+            # Rserve eval returns the value of the last expression
+            eval_res = conn.eval(wrapped_code)
             conn.close()
-            return {"success": True, "result": result}
+            
+            output_log = eval_res.get("output", "")
+            result_val = eval_res.get("result")
+            
+            # Check if the result itself is an error object from our tryCatch
+            if isinstance(result_val, dict) and "error" in result_val:
+                return {
+                    "success": False, 
+                    "error": str(result_val["error"]),
+                    "output": output_log
+                }
+                
+            return {
+                "success": True, 
+                "result": str(result_val) if result_val is not None else "",
+                "output": output_log
+            }
         except Exception as e:
             logger.error(f"Failed to execute R code in session {session_id}: {e}")
             return {"success": False, "error": str(e)}
