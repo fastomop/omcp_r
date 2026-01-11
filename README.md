@@ -1,10 +1,10 @@
 # OMCP R Sandbox Server
 
-A secure, MCP-compliant R code execution environment specialized for **OMOP CDM** and **DARWIN EU®** analytics. This server implements the Model Context Protocol (MCP) for safe, isolated, and stateful R session management.
+A secure, MCP-compliant R code execution environment specialised for **OMOP CDM** and **DARWIN EU®** analytics. This server implements the Model Context Protocol (MCP) for safe, isolated, and stateful R session management.
 
 ## 🌟 Key Features
 
-- **OMOP/DARWIN Specialized**: Pre-configured with OHDSI HADES and DARWIN R packages (`CDMConnector`, `DatabaseConnector`, `SqlRender`, etc.) and Java 17.
+- **OMOP/DARWIN Specialised**: Pre-configured with OHDSI HADES and DARWIN R packages (`CDMConnector`, `DatabaseConnector`, `SqlRender`, etc.) and Java 17.
 - **Persistent R Sessions**: Maintain state across multiple code executions using Docker-based Rserve containers.
 - **Robust Output Capturing**: Captures `stdout` and `stderr` (e.g., `print()`, `summary()`, and OHDSI logs) and returns them alongside execution results.
 - **Persistent Workspaces**: Support for host bind-mounts to preserve files across session lifecycles.
@@ -14,7 +14,7 @@ A secure, MCP-compliant R code execution environment specialized for **OMOP CDM*
   - Read-only root filesystem with limited writable `tmpfs`.
   - Dropped Linux capabilities and no privilege escalation.
   - Network isolation (configurable) and resource limits (CPU/Memory).
-- **Standardized Connectivity**: Ready for PostgreSQL/OMOP CDM databases with auto-proxying for `localhost` connections to `host.docker.internal`.
+- **Standardised Connectivity**: Ready for PostgreSQL/OMOP CDM databases with auto-proxying for `localhost` connections to `host.docker.internal`.
 
 ## 🛠️ MCP Tools
 
@@ -40,7 +40,7 @@ The server exposes the following tools to any MCP client:
 
 ### 1. Installation
 ```sh
-git clone https://github.com/Z0shua/omcp_r.git
+git clone [https://github.com/fastomop/omcp_r]
 cd omcp_r
 uv pip install -e .
 ```
