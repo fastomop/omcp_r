@@ -1,0 +1,31 @@
+# R Sandbox Dockerfile for OMOP/DARWIN Analytics
+# Based on rocker/tidyverse for a solid foundation
+FROM rocker/tidyverse:latest
+
+# Install Java 17 (required for OHDSI DatabaseConnector and other Java-based tools)
+RUN apt-get update && apt-get install -y \
+    openjdk-17-jdk \
+    libcairo2-dev \
+    libxt-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Configure Java for R
+RUN R CMD javareconf
+
+# Install Rserve and OHDSI/DARWIN R packages
+RUN R -e "install.packages(c('Rserve', 'remotes', 'DatabaseConnector', 'SqlRender', 'CDMConnector', 'omopgenerics', 'dplyr', 'readr'), repos='https://cloud.r-project.org')"
+
+# Create a non-root user
+RUN useradd -m sandboxuser
+WORKDIR /sandbox
+RUN chown -R sandboxuser:sandboxuser /sandbox
+
+# Configure Rserve
+# We enable remote access and plaintext for internal Docker communication
+RUN echo "remote enable\nplaintext enable\nport 6311\nencoding utf8" > /etc/Rserve.conf
+
+# Use non-root user
+USER sandboxuser
+
+# Start Rserve in the foreground
+CMD ["R", "-e", "Rserve::run.Rserve(config.file='/etc/Rserve.conf')"]
