@@ -7,8 +7,10 @@ A secure, MCP-compliant R code execution environment specialised for **OMOP CDM*
 - **OMOP/DARWIN Specialised**: Pre-configured with OHDSI HADES and DARWIN R packages (`CDMConnector`, `DatabaseConnector`, `SqlRender`, etc.) and Java 17.
 - **Persistent R Sessions**: Maintain state across multiple code executions using Docker-based Rserve containers.
 - **Robust Output Capturing**: Captures `stdout` and `stderr` (e.g., `print()`, `summary()`, and OHDSI logs) and returns them alongside execution results.
+- **Per-Execution Limits**: `execute_in_session` supports typed `limits` (time and output-size controls) for safer runtime behavior.
 - **Persistent Workspaces**: Support for host bind-mounts to preserve files across session lifecycles.
 - **File Management**: Built-in tools to upload cohort definitions, list sandbox files, and retrieve analysis results.
+- **Structured Errors**: Tool failures return machine-readable error objects (`code`, `message`, `retryable`, `details`).
 - **Enterprise-Grade Security**: 
   - Docker isolation with non-root user (UID 1000).
   - Read-only root filesystem with limited writable `tmpfs`.
@@ -53,6 +55,18 @@ SANDBOX_TIMEOUT=300
 DB_HOST=your-postgres-host
 DB_NAME=cdm_database
 # ... see sample.env for all options
+```
+
+Example execution with limits:
+```json
+{
+  "session_id": "your-session-id",
+  "code": "print('hello')",
+  "limits": {
+    "max_duration_secs": 5,
+    "max_output_bytes": 20000
+  }
+}
 ```
 
 ### 3. Build & Run

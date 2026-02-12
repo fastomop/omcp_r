@@ -1,131 +1,69 @@
 # API Reference - OMCP R Sandbox
 
-This document provides comprehensive API documentation for all MCP tools available in the OMCP R Sandbox.
+The MCP server exposes the following tools:
 
-## API Overview
+1. `create_session(timeout: Optional[int] = 300)`
+2. `list_sessions()`
+3. `close_session(session_id: str)`
+4. `execute_in_session(session_id: str, code: str, limits: Optional[dict] = None)`
+5. `list_session_files(session_id: str, path: str = ".")`
+6. `read_session_file(session_id: str, path: str)`
+7. `write_session_file(session_id: str, path: str, content: str)`
+8. `install_package(session_id: str, package_name: str, source: str = "CRAN")`
 
-The OMCP R Sandbox exposes the following MCP tools for secure R code execution:
+## Standard Response Envelope
 
-1. **create_sandbox** - Create new isolated R environments
-2. **list_sandboxes** - List and manage active sandboxes
-3. **remove_sandbox** - Safely remove sandboxes
-4. **execute_r_code** - Run R code in isolated containers
-
-## Tool Specifications
-
-### 1. create_sandbox
-
-Creates a new isolated R sandbox environment.
-
-#### Parameters
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| timeout   | Optional[int] | No | 300 | Sandbox timeout in seconds |
-
-#### Returns
+### Success
 ```json
 {
-    "success": true,
-    "sandbox_id": "uuid-string",
-    "created_at": "2024-01-01T12:00:00",
-    "last_used": "2024-01-01T12:00:00"
+  "success": true,
+  "...": "tool-specific fields"
 }
 ```
 
-#### Error Response
+### Error
 ```json
 {
-    "success": false,
-    "error": "Error message describing the failure"
+  "success": false,
+  "error": {
+    "code": "machine_readable_code",
+    "message": "human readable message",
+    "retryable": false,
+    "details": {}
+  }
 }
 ```
 
-### 2. list_sandboxes
+## `execute_in_session` Limits
 
-Lists all active R sandboxes.
+`limits` is optional and supports:
 
-#### Parameters
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| include_inactive | bool | No | false | Whether to include inactive sandboxes |
+- `max_duration_secs` (number, `> 0`)
+- `max_output_bytes` (integer, `> 0`)
 
-#### Returns
+Example:
 ```json
 {
-    "success": true,
-    "sandboxes": [
-        {
-            "id": "uuid-string",
-            "created_at": "2024-01-01T12:00:00",
-            "last_used": "2024-01-01T12:00:00"
-        }
-    ],
-    "count": 1
+  "session_id": "session-uuid",
+  "code": "print('hello')",
+  "limits": {
+    "max_duration_secs": 5,
+    "max_output_bytes": 20000
+  }
 }
 ```
 
-#### Error Response
-```json
-{
-    "success": false,
-    "error": "Error message describing the failure"
-}
-```
+Execution responses include:
 
-### 3. remove_sandbox
+- `output`: captured `stdout`/`stderr`
+- `result`: textual representation of the final value (on success)
+- `meta.elapsed_secs`
+- `meta.output_truncated`
 
-Removes an R sandbox.
+## File Path Policy
 
-#### Parameters
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| sandbox_id | str | Yes | - | The unique identifier of the sandbox to remove |
-| force | bool | No | false | Whether to force removal of active sandboxes |
+File tools are restricted to `/sandbox`:
 
-#### Returns
-```json
-{
-    "success": true,
-    "message": "Sandbox uuid-string removed successfully"
-}
-```
-
-#### Error Response
-```json
-{
-    "success": false,
-    "error": "Error message describing the failure"
-}
-```
-
-### 4. execute_r_code
-
-Runs R code in an isolated sandbox.
-
-#### Parameters
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| sandbox_id | str | Yes | - | The unique identifier of the sandbox |
-| code | str | Yes | - | The R code to execute |
-| timeout | Optional[int] | No | 30 | Code execution timeout in seconds |
-
-#### Returns
-```json
-{
-    "success": true,
-    "output": "R code output",
-    "exit_code": 0
-}
-```
-
-#### Error Response
-```json
-{
-    "success": false,
-    "error": "Error message describing the failure"
-}
-```
-
----
-
-For more details, see the [Implementation Details](implementation.md) and [Configuration Guide](configuration.md). 
+- Relative paths are resolved under `/sandbox`
+- Absolute paths must already be under `/sandbox`
+- Path traversal outside `/sandbox` is rejected with `error.code = "invalid_path"`

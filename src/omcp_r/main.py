@@ -1,10 +1,10 @@
-import asyncio
 import logging
 import sys
 from typing import Optional, Dict, Any
 from mcp.server.fastmcp import FastMCP
 from omcp_r.sandbox_manager import SessionManager
 from omcp_r.config import get_config
+from omcp_r.errors import SandboxError, error_payload
 
 config = get_config()
 
@@ -20,6 +20,22 @@ mcp = FastMCP("R Sandbox")
 
 session_manager = SessionManager(config)
 
+
+def success_payload(**kwargs: Any) -> Dict[str, Any]:
+    return {"success": True, **kwargs}
+
+
+def map_error(e: Exception, default_code: str, default_message: str) -> Dict[str, Any]:
+    if isinstance(e, SandboxError):
+        return error_payload(
+            e.code,
+            e.message,
+            retryable=e.retryable,
+            details=e.details,
+        )
+    logger.exception(default_message)
+    return error_payload(default_code, default_message, retryable=True, details={"reason": str(e)})
+
 @mcp.tool()
 async def create_session(timeout: Optional[int] = 300) -> Dict[str, Any]:
     """Start a new persistent R session."""
@@ -30,102 +46,76 @@ async def create_session(timeout: Optional[int] = 300) -> Dict[str, Any]:
             None
         )
         if not session_info:
-            raise Exception("Failed to get session information after creation")
-        return {
-            "success": True,
-            "session_id": session_id,
-            "created_at": session_info["created_at"],
-            "last_used": session_info["last_used"],
-            "host_port": session_info["host_port"]
-        }
+            raise SandboxError("session_create_failed", "Failed to get session information after creation")
+        return success_payload(
+            session_id=session_id,
+            created_at=session_info["created_at"],
+            last_used=session_info["last_used"],
+            host_port=session_info["host_port"],
+        )
     except Exception as e:
-        logger.error(f"Failed to create R session: {e}")
-        return {
-            "success": False,
-            "error": str(e)
-        }
+        return map_error(e, "session_create_failed", "Failed to create R session")
 
 @mcp.tool()
 async def list_sessions() -> Dict[str, Any]:
     """List all active R sessions."""
     try:
         sessions = session_manager.list_sessions()
-        return {
-            "success": True,
-            "sessions": sessions,
-            "count": len(sessions)
-        }
+        return success_payload(
+            sessions=sessions,
+            count=len(sessions),
+        )
     except Exception as e:
-        logger.error(f"Failed to list R sessions: {e}")
-        return {
-            "success": False,
-            "error": str(e)
-        }
+        return map_error(e, "list_sessions_failed", "Failed to list sessions")
 
 @mcp.tool()
 async def close_session(session_id: str) -> Dict[str, Any]:
     """Close and remove an R session."""
     try:
         session_manager.close_session(session_id)
-        return {
-            "success": True,
-            "message": f"Closed R session {session_id}"
-        }
+        return success_payload(message=f"Closed R session {session_id}")
     except Exception as e:
-        logger.error(f"Failed to close R session {session_id}: {e}")
-        return {
-            "success": False,
-            "error": str(e)
-        }
+        return map_error(e, "session_close_failed", f"Failed to close session {session_id}")
 
 @mcp.tool()
-async def execute_in_session(session_id: str, code: str) -> Dict[str, Any]:
+async def execute_in_session(
+    session_id: str,
+    code: str,
+    limits: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     """Execute R code in a session. State persists and output is captured."""
     try:
-        result = session_manager.execute_in_session(session_id, code)
+        result = session_manager.execute_in_session(session_id, code, limits_payload=limits)
         return result
     except Exception as e:
-        logger.error(f"Failed to execute R code in session {session_id}: {e}")
-        return {
-            "success": False,
-            "error": str(e)
-        }
+        return map_error(e, "execution_failed", f"Failed to execute code in session {session_id}")
 
 @mcp.tool()
 async def list_session_files(session_id: str, path: str = ".") -> Dict[str, Any]:
     """List files in the session's workspace."""
     try:
         files = session_manager.list_files(session_id, path)
-        return {
-            "success": True,
-            "files": files
-        }
+        return success_payload(files=files)
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return map_error(e, "list_files_failed", f"Failed to list files for {session_id}")
 
 @mcp.tool()
 async def read_session_file(session_id: str, path: str) -> Dict[str, Any]:
     """Read a text file from the session."""
     try:
         content = session_manager.read_file(session_id, path)
-        return {
-            "success": True,
-            "content": content
-        }
+        return success_payload(content=content)
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return map_error(e, "read_file_failed", f"Failed to read file from {session_id}")
 
 @mcp.tool()
 async def write_session_file(session_id: str, path: str, content: str) -> Dict[str, Any]:
     """Write content to a file in the session."""
     try:
         session_manager.write_file(session_id, path, content)
-        return {
-            "success": True,
-            "message": f"Successfully wrote to {path}"
-        }
+        return success_payload(message=f"Successfully wrote to {path}")
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return map_error(e, "write_file_failed", f"Failed to write file for {session_id}")
 
 @mcp.tool()
 async def install_package(session_id: str, package_name: str, source: str = "CRAN") -> Dict[str, Any]:
@@ -137,21 +127,24 @@ async def install_package(session_id: str, package_name: str, source: str = "CRA
         elif source.upper() == "GITHUB":
             install_cmd = f'remotes::install_github("{package_name}", auth_token=Sys.getenv("GITHUB_PAT"))'
         else:
-            return {"success": False, "error": "Invalid source. Use CRAN or GitHub."}
-            
+            return error_payload("invalid_source", "Invalid source. Use CRAN or GitHub.")
+
         result = session_manager.execute_in_session(session_id, install_cmd)
-        
+
         if result["success"]:
-             return {"success": True, "message": f"Installed {package_name}", "output": result.get("output", "")}
-        else:
-             return {"success": False, "error": result.get("error"), "output": result.get("output", "")}
-             
+            return success_payload(
+                message=f"Installed {package_name}",
+                output=result.get("output", ""),
+                meta=result.get("meta", {}),
+            )
+        return result
+
     except Exception as e:
-        logger.error(f"Failed to install package {package_name} in session {session_id}: {e}")
-        return {
-            "success": False,
-            "error": str(e)
-        }
+        return map_error(
+            e,
+            "install_package_failed",
+            f"Failed to install package {package_name} in session {session_id}",
+        )
 
 if __name__ == "__main__":
     logger.info("Starting OMCP R Sandbox MCP Server...")

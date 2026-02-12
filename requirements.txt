@@ -2,3 +2,4 @@ docker
 mcp
 python-dotenv
 pyRserve
+pytest

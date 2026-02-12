@@ -10,6 +10,11 @@ class RConfig:
         self.max_sandboxes = int(os.getenv("MAX_SANDBOXES", 10))
         self.docker_image = os.getenv("DOCKER_IMAGE", "omcp-r-sandbox:latest")
         self.log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+        self.default_exec_timeout_secs = float(os.getenv("DEFAULT_EXEC_TIMEOUT_SECS", 30))
+        self.max_output_bytes = int(os.getenv("MAX_OUTPUT_BYTES", 100_000))
+        self.max_code_chars = int(os.getenv("MAX_CODE_CHARS", 50_000))
+        self.max_file_read_bytes = int(os.getenv("MAX_FILE_READ_BYTES", 2_000_000))
+        self.max_file_write_bytes = int(os.getenv("MAX_FILE_WRITE_BYTES", 2_000_000))
         # Database connection defaults
         self.db_host = os.getenv("DB_HOST", "")
         self.db_port = int(os.getenv("DB_PORT", 5432))
